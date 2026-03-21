@@ -1,0 +1,20 @@
+[Unit]
+Description=TeleOps Telegram Host Controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=teleops
+Group=teleops
+Environment=HOME=/home/teleops
+Environment=TELEOPS_CONFIG=/home/teleops/.config/teleops/teleops.conf
+WorkingDirectory=/home/teleops
+ExecStart=/usr/bin/teleops start
+ExecStop=/usr/bin/teleops stop
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
