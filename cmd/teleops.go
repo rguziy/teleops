@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	AppVersion       = "1.0.1"
+	AppVersion       = "1.0.2"
 	AppName          = "teleops"
 	AppDesc          = "Telegram-based Host Controller (Remote Ops via Bot)"
 	stopPollInterval = time.Second
@@ -52,6 +52,7 @@ type program struct {
 func main() {
 	flag.Usage = usage
 
+	configFlag := flag.String("config", "", "Path to INI config file")
 	pidFileFlag := flag.String("pid-file", "", "Path to PID file")
 	forceFlag := flag.Bool("force", false, "Overwrite an existing config file during init")
 	verFlag := flag.Bool("version", false, "Show version")
@@ -74,12 +75,59 @@ func main() {
 		usage()
 		return
 	}
-	if len(args) > 1 {
-		log.Fatalf("unknown arguments: %s", strings.Join(args[1:], " "))
+
+	command := ""
+	for i := 0; i < len(args); i++ {
+		arg := strings.TrimSpace(args[i])
+		switch arg {
+		case "", "	":
+			continue
+		case "--force":
+			*forceFlag = true
+		case "-help", "--help":
+			usage()
+			return
+		case "--config":
+			i++
+			if i >= len(args) || strings.TrimSpace(args[i]) == "" {
+				log.Fatal("missing value for --config")
+			}
+			*configFlag = args[i]
+		case "--pid-file":
+			i++
+			if i >= len(args) || strings.TrimSpace(args[i]) == "" {
+				log.Fatal("missing value for --pid-file")
+			}
+			*pidFileFlag = args[i]
+		default:
+			if strings.HasPrefix(arg, "--config=") {
+				*configFlag = strings.TrimSpace(strings.TrimPrefix(arg, "--config="))
+				if *configFlag == "" {
+					log.Fatal("missing value for --config")
+				}
+				continue
+			}
+			if strings.HasPrefix(arg, "--pid-file=") {
+				*pidFileFlag = strings.TrimSpace(strings.TrimPrefix(arg, "--pid-file="))
+				if *pidFileFlag == "" {
+					log.Fatal("missing value for --pid-file")
+				}
+				continue
+			}
+			if command == "" {
+				command = strings.ToLower(arg)
+				continue
+			}
+			log.Fatalf("unknown arguments: %s", strings.Join(args[i:], " "))
+		}
 	}
 
-	command := strings.ToLower(strings.TrimSpace(args[0]))
-	confPath, err := resolveConfigPath()
+	if command == "" {
+		usage()
+		return
+	}
+
+	confPath, err := resolveConfigPath(*configFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,7 +145,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "start":
-		if err := prg.start(ctx, pidPath, stopPath); err != nil {
+		if err := prg.start(ctx, confPath, pidPath, stopPath); err != nil {
 			log.Fatal(err)
 		}
 	case "stop":
@@ -105,7 +153,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "restart":
-		if err := restartProcess(ctx, prg, pidPath, stopPath); err != nil {
+		if err := restartProcess(ctx, prg, confPath, pidPath, stopPath); err != nil {
 			log.Fatal(err)
 		}
 	case "status":
@@ -124,12 +172,12 @@ func main() {
 // and return the output to the user. If the context is cancelled,
 // it will also gracefully shutdown. If a stop request is received, it
 // will also gracefully shutdown.
-func (p *program) start(ctx context.Context, pidPath, stopPath string) error {
+func (p *program) start(ctx context.Context, confPath, pidPath, stopPath string) error {
 	if err := ensureSingleInstance(pidPath, stopPath); err != nil {
 		return err
 	}
 
-	cfg, confPath, err := loadConfig()
+	cfg, confPath, err := loadConfig(confPath)
 	if err != nil {
 		return err
 	}
@@ -324,13 +372,13 @@ func statusProcess(pidPath, stopPath string) error {
 // and then start it again using start. If the PID file does not
 // exist, it will simply start the process using start. If an error
 // occurs during stopping or starting, it will be returned.
-func restartProcess(ctx context.Context, p *program, pidPath, stopPath string) error {
+func restartProcess(ctx context.Context, p *program, confPath, pidPath, stopPath string) error {
 	if fileExists(pidPath) {
 		if err := stopProcess(pidPath, stopPath); err != nil {
 			return err
 		}
 	}
-	return p.start(ctx, pidPath, stopPath)
+	return p.start(ctx, confPath, pidPath, stopPath)
 }
 
 // stopProcess stops the running TeleOps process (if it exists) by writing
@@ -522,8 +570,8 @@ func fileExists(path string) bool {
 func usage() {
 	fmt.Printf("%s v%s - %s\n", AppName, AppVersion, AppDesc)
 	fmt.Println("\nUsage:")
-	fmt.Println("  teleops [--force] init")
-	fmt.Println("  teleops [--pid-file path] <start|stop|restart|status>")
+	fmt.Println("  teleops [--config path] [--force] init")
+	fmt.Println("  teleops [--config path] [--pid-file path] <start|stop|restart|status>")
 	fmt.Println("  teleops [-version] [-help]")
 
 	fmt.Println("\nCommands:")
@@ -534,6 +582,7 @@ func usage() {
 	fmt.Println("  status           Show whether teleops is running, stopping, or stale")
 
 	fmt.Println("\nOptions:")
+	fmt.Println("  --config path    Path to INI config file (highest priority)")
 	fmt.Println("  --force          Overwrite the existing config file during init")
 	fmt.Println("  --pid-file path  Path to PID file (default: next to config)")
 	fmt.Println("  -version         Show application version")
@@ -553,12 +602,7 @@ func usage() {
 // loadConfig resolves the configured path and loads the existing INI file.
 // It does not create a config automatically; users should run `teleops init`
 // first when the config file is missing.
-func loadConfig() (*Config, string, error) {
-	confPath, err := resolveConfigPath()
-	if err != nil {
-		return nil, "", err
-	}
-
+func loadConfig(confPath string) (*Config, string, error) {
 	if _, err := os.Stat(confPath); os.IsNotExist(err) {
 		return nil, confPath, fmt.Errorf("config not found at %s; run 'teleops init' first", confPath)
 	}
@@ -634,7 +678,11 @@ func initConfig(confPath string, force bool) error {
 // using os.UserHomeDir() and return a default configuration file path
 // in the user's home directory. If the user home directory cannot be
 // resolved, it will return an error.
-func resolveConfigPath() (string, error) {
+func resolveConfigPath(explicit string) (string, error) {
+	if explicit = strings.TrimSpace(explicit); explicit != "" {
+		return explicit, nil
+	}
+
 	if explicit := strings.TrimSpace(os.Getenv("TELEOPS_CONFIG")); explicit != "" {
 		return explicit, nil
 	}

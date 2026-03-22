@@ -1,5 +1,5 @@
 BINARY_NAME := teleops
-VERSION ?= 1.0.1
+VERSION ?= 1.0.2
 BUILD_DIR := build
 CMD_PACKAGE := ./cmd
 GO ?= go
