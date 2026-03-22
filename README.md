@@ -1,10 +1,10 @@
-# TeleOps
+# 🤖 TeleOps
 
 TeleOps is a small self-hosted Telegram host controller written in Go.
 
 It lets you expose a fixed set of host commands through a Telegram bot, with a simple INI config, explicit lifecycle commands, and no external service dependencies.
 
-## Features
+## ✨ Features
 
 - Cross-platform: Linux and Windows
 - Explicit config lifecycle with `teleops init`
@@ -15,7 +15,7 @@ It lets you expose a fixed set of host commands through a Telegram bot, with a s
 - Local file logging
 - Simple release tooling for GNU Make and PowerShell
 
-## Security Notes
+## 🔒 Security Notes
 
 TeleOps is intended for trusted, self-hosted environments.
 
@@ -25,7 +25,7 @@ TeleOps is intended for trusted, self-hosted environments.
 - Only expose commands you are comfortable running remotely.
 - Prefer dedicated, low-privilege accounts where possible.
 
-## Install
+## 📦 Install
 
 ### Build locally
 
@@ -47,7 +47,7 @@ Windows PowerShell:
 powershell -ExecutionPolicy Bypass -File .\build-release.ps1
 ```
 
-## Usage
+## 🚀 Usage
 
 ### 1. Initialize config
 
@@ -97,6 +97,16 @@ Where:
 - `bot_token` is the token from BotFather, for example `123456789:AAExampleBotTokenReplaceMe`
 - `allowed_user_id` is your personal Telegram numeric user ID, for example `937778855`
 
+## 📸 Screenshots
+
+Example command definitions in config:
+
+![Command examples](samples/commands.jpg)
+
+Example command execution in Telegram:
+
+![Telegram bot execution](samples/telegram-bot.jpg)
+
 ### 3. Start TeleOps
 
 ```bash
@@ -127,7 +137,7 @@ teleops stop
 teleops restart
 ```
 
-## Service Examples
+## ⚙️ Service Examples
 
 TeleOps runs as a foreground process. For unattended operation, supervise it with
 an external service manager.
@@ -160,7 +170,7 @@ such as NSSM. An example installer script is included at
 `services/windows/install-nssm.ps1`, with extra notes in
 `services/windows/README.md`.
 
-## Commands
+## ⌨️ Commands
 
 ```text
 teleops [--config path] [--force] init
@@ -168,7 +178,7 @@ teleops [--config path] [--pid-file path] <start|stop|restart|status>
 teleops [-version] [-help]
 ```
 
-## Configuration
+## 📄 Configuration
 
 Config sections:
 
@@ -193,10 +203,10 @@ Default PID file:
 
 - `~/.config/teleops/teleops.pid`
 
-## Project Status
+## 🌱 Project Status
 
 TeleOps is intentionally small and minimal. It is designed to be easy to audit, easy to self-host, and easy to adapt.
 
-## License
+## ⚖️ License
 
 MIT. See [LICENSE](LICENSE).
