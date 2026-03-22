@@ -55,10 +55,16 @@ powershell -ExecutionPolicy Bypass -File .\build-release.ps1
 teleops init
 ```
 
+If you want to use a custom config path:
+
+```bash
+teleops --config ./teleops.conf init
+```
+
 If the config already exists and you want to regenerate it:
 
 ```bash
-teleops --force init
+teleops init --force
 ```
 
 ### 2. Edit config
@@ -69,7 +75,7 @@ Default config path:
 ~/.config/teleops/teleops.conf
 ```
 
-You can override it with `TELEOPS_CONFIG`.
+You can override it with `--config /path/to/teleops.conf` or `TELEOPS_CONFIG`. The `--config` flag has higher priority.
 
 Example:
 
@@ -95,6 +101,12 @@ Where:
 
 ```bash
 teleops start
+```
+
+With an explicit config path:
+
+```bash
+teleops start --config /etc/teleops/teleops.conf
 ```
 
 ### 4. Check status
@@ -151,8 +163,8 @@ such as NSSM. An example installer script is included at
 ## Commands
 
 ```text
-teleops [--force] init
-teleops [--pid-file path] <start|stop|restart|status>
+teleops [--config path] [--force] init
+teleops [--config path] [--pid-file path] <start|stop|restart|status>
 teleops [-version] [-help]
 ```
 
@@ -163,6 +175,12 @@ Config sections:
 - `[telegram]`
 - `[commands]`
 - `[logging]`
+
+Configuration lookup priority:
+
+1. `--config`
+2. `TELEOPS_CONFIG`
+3. `~/.config/teleops/teleops.conf`
 
 Environment variable overrides:
 
